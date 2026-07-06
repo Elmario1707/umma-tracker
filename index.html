@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трекер Грузов | UMMA Logistics</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 500px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 30px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        input:focus { border-color: #007bff; }
+        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+        .result-card { display: none; border-top: 2px solid #007bff; padding-top: 20px; }
+        .status-badge { display: inline-block; padding: 6px 12px; background: #e1f5fe; color: #0288d1; border-radius: 20px; font-weight: bold; font-size: 14px; margin-bottom: 15px; }
+        .error { color: #dc3545; text-align: center; display: none; font-weight: 500; }
+        .timeline { margin-top: 20px; position: relative; padding-left: 20px; border-left: 2px solid #e9ecef; }
+        .timeline-item { margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; width: 10px; height: 10px; background: #007bff; border-radius: 50%; left: -26px; top: 5px; }
+        .time { font-size: 12px; color: #888; }
+        .loc { font-weight: bold; margin: 2px 0; }
+        .comm { font-size: 14px; color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Отслеживание груза</h2>
+    <div class="search-box">
+        <input type="text" id="trackInput" placeholder="Введите ваш код (например, KG-777-AA)">
+        <button onclick="trackCargo()">Найти</button>
+    </div>
+
+    <div id="errorBlock" class="error">Код не найден. Проверьте правильность ввода.</div>
+
+    <div id="resultBlock" class="result-card">
+        <div id="status" class="status-badge">Статус</div>
+        <p><strong>Последнее обновление:</strong> <span id="lastUpdate">-</span></p>
+        
+        <h3>История перемещения:</h3>
+        <div id="timeline" class="timeline"></div>
+    </div>
+</div>
+
+<script>
+    async function trackCargo() {
+        const trackCode = document.getElementById('trackInput').value.trim();
+        const errorBlock = document.getElementById('errorBlock');
+        const resultBlock = document.getElementById('resultBlock');
+        const timeline = document.getElementById('timeline');
+
+        errorBlock.style.display = 'none';
+        resultBlock.style.display = 'none';
+
+        if (!trackCode) return;
+
+        try {
+            // Запрашиваем актуальный JSON файл из вашего репозитория
+            // Чтобы избежать кэширования гитхабом, добавляем случайный параметр ?t=...
+            const response = await fetch(`./data.json?t=${Date.now()}`);
+            const data = await response.json();
+
+            if (data[trackCode]) {
+                const cargo = data[trackCode];
+                
+                document.getElementById('status').innerText = cargo.status;
+                document.getElementById('lastUpdate').innerText = cargo.lastUpdate;
+                
+                // Рендерим историю
+                timeline.innerHTML = '';
+                // Разворачиваем массив, чтобы свежие статусы были сверху
+                cargo.history.slice().reverse().forEach(item => {
+                    timeline.innerHTML += `
+                        <div class="timeline-item">
+                            <div class="time">${item.date}</div>
+                            <div class="loc">${item.location}</div>
+                            <div class="comm">${item.comment}</div>
+                        </div>
+                    `;
+                });
+
+                resultBlock.style.display = 'block';
+            } else {
+                errorBlock.style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Ошибка загрузки данных:", error);
+            alert("Произошла ошибка при загрузке данных. Попробуйте позже.");
+        }
+    }
+</script>
+
+</body>
+</html>
